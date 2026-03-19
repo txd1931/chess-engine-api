@@ -1,0 +1,18 @@
+{
+  "java.format.settings.url": "config/formatting/eclipse-java-formatter.xml",
+  "java.format.settings.profile": "ProjectStyle",
+  "java.format.enabled": true,
+  "editor.detectIndentation": false,
+  "editor.formatOnSave": false,
+  "editor.formatOnSaveMode": "file",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "editor.defaultFormatter": "redhat.java",
+  "java.debug.settings.enableRunDebugCodeLens": false,
+  "editor.codeLens": false,
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java",
+    "editor.formatOnSave": false,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  }
+}

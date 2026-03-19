@@ -1,0 +1,47 @@
+# ======================
+# Maven
+# ======================
+target/
+
+# Maven wrapper temp files
+.mvn/wrapper/maven-wrapper.jar
+
+# ======================
+# Logs
+# ======================
+*.log
+
+# ======================
+# OS files
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# IDE files
+# ======================
+
+# VSCode (keep settings if you want repo-level config)
+.vscode/*
+!.vscode/settings.json
+
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# ======================
+# Java
+# ======================
+*.class
+
+# ======================
+# Temporary files
+# ======================
+*.tmp
+*.swp
