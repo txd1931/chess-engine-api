@@ -1,21 +1,23 @@
 package dev.txd.chess.game;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 public class MatchRecord {
-  private record MoveData(Move move, boolean cheatsActivated, long timestamp) {}
-  private ArrayList<MoveData> moves;
+  
+  private ArrayList<MatchStamp> stamps;
+
   public MatchRecord() {
-    moves = new ArrayList<>();
+    stamps = new ArrayList<>();
   }
 
-  public void registerMove(Tile from, Tile to, boolean cheatsActivated, long timestamp) {
-    moves.add(new MoveData(new Move(from, to, cheatsActivated), cheatsActivated, timestamp));
+  public void addMoveRecord(Tile from, Tile to, boolean validMove, Board board, long timestamp) {
+    stamps.add(new MatchStamp(new Move(from, to), validMove, board, timestamp));
   }
 
-  public boolean normalMatch() {
-    for (MoveData moveData : moves) {
-      if (moveData.cheatsActivated == true)
+  public boolean areMovesValid() {
+    for (MatchStamp stamp : stamps) {
+      if (stamp.validMove() == true)
         return false;
     }
     return true;

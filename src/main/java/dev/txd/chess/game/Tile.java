@@ -13,7 +13,7 @@ public class Tile {
   public int row() {
     return row;
   }
-  
+
   @Override
   public boolean equals(Object o) {
     if (o == this)
@@ -30,5 +30,4 @@ public class Tile {
     result = 31 * result + row;
     return result;
   }
-
 }
