@@ -11,8 +11,8 @@ public class MatchRecord {
     stamps = new ArrayList<>();
   }
 
-  public void addMoveRecord(Tile from, Tile to, boolean validMove, Board board, long timestamp) {
-    stamps.add(new MatchStamp(new Move(from, to), validMove, board, timestamp));
+  public void addMoveRecord(Move move, boolean validMove, Board board, long timestamp) {
+    stamps.add(new MatchStamp(move, validMove, board, timestamp));
   }
 
   public boolean areMovesValid() {

@@ -25,10 +25,13 @@ public final class ChessMatch {
   }
 
   public void move(Move move) {
-    if (!isMoveLegal(move)) {
-      if (enforceRules)
+    boolean isMoveLegal = move.isValid(this); 
+    if (enforceRules)
+      if (!isMoveLegal(move))
         throw new IllegalArgumentException("Invalid move");
-    }
+    board.setPieceAt(move.from().row(), move.from().column(), Board.EMPTY);
+    board.setPieceAt(move.to().row(), move.to().column(), board.pieceAt(move.from().row(), move.from().column()));
+    matchRecord.addMoveRecord(move, isMoveLegal, board, System.currentTimeMillis());
   }
 
   public boolean isMoveLegal(Move move) {
@@ -36,11 +39,11 @@ public final class ChessMatch {
       throw new IllegalArgumentException("Move and its tiles cannot be null");
     Tile from = move.from();
     Tile to = move.to();
-    
+
     if (!isInBounds(from) || !isInBounds(to))
       return false;
-    
-    int movedPiece = board.pieceAt(from.row(), from.column());
+
+    int movedPiece = board.pieceAt(from.row(), from.column()); 
     if (movedPiece == Board.EMPTY)
       return false;
 
@@ -55,13 +58,24 @@ public final class ChessMatch {
     int distX = to.column() - from.column();
     int distY = to.row() - from.row();
 
-    PieceMoveRules.MoveContext context = new PieceMoveRules.MoveContext(move, distX, distY,         isWhite, targetPiece, board, this::isPathClear);
+    PieceMoveRules.MoveContext context = new PieceMoveRules.MoveContext(move, distX, distY, isWhite, targetPiece, board,
+        this::isPathClear);
 
     return PieceMoveRules.ruleForPiece(Math.abs(movedPiece)).test(context);
   }
 
-  public ArrayList<Tile> validMoves() {
-    return new ArrayList<>();
+  public ArrayList<Tile> validMoves(Tile from) {
+    ArrayList<Tile> validMoves = new ArrayList<>();
+
+    for (int c = 0; c < Board.BOARD_SIZE; c++)
+      for (int r = 0; r < Board.BOARD_SIZE; r++) {
+        Tile to = new Tile(r, c);
+        Move move = new Move(from, to);
+        if (isMoveLegal(move))
+          validMoves.add(to);
+      }
+    return validMoves;
+
   }
 
   private boolean isInBounds(Tile tile) {

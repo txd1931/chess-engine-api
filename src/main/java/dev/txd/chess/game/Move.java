@@ -16,8 +16,7 @@ class Move {
     return to;
   }
 
-  @SuppressWarnings("unlikely-arg-type")
   public boolean isValid(ChessMatch match) {
-    return match.validMoves().contains(this);
+    return match.isMoveLegal(this);
   }
 }
