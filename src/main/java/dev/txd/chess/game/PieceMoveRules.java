@@ -2,7 +2,7 @@ package dev.txd.chess.game;
 
 import java.util.function.Predicate;
 
-public final class PieceMoveRules {
+final class PieceMoveRules {
 
   @FunctionalInterface
   public interface PathClearChecker {
@@ -27,8 +27,8 @@ public final class PieceMoveRules {
     return oneStepForward || twoStepForward || diagonalCapture;
   };
 
-  public static final Predicate<MoveContext> KNIGHT_RULE = ctx -> (Math.abs(ctx.distX()) == 2 && Math.abs(ctx.distY()) == 1)
-      || (Math.abs(ctx.distX()) == 1 && Math.abs(ctx.distY()) == 2);
+  public static final Predicate<MoveContext> KNIGHT_RULE = ctx -> (Math.abs(ctx.distX()) == 2
+      && Math.abs(ctx.distY()) == 1) || (Math.abs(ctx.distX()) == 1 && Math.abs(ctx.distY()) == 2);
 
   public static final Predicate<MoveContext> BISHOP_RULE = ctx -> Math.abs(ctx.distX()) == Math.abs(ctx.distY())
       && ctx.pathClearChecker().test(ctx.move());
@@ -47,13 +47,13 @@ public final class PieceMoveRules {
 
   public static Predicate<MoveContext> ruleForPiece(int absPieceType) {
     return switch (absPieceType) {
-    case Board.PAWN   -> PAWN_RULE;
-    case Board.KNIGHT -> KNIGHT_RULE;
-    case Board.BISHOP -> BISHOP_RULE;
-    case Board.ROOK   -> ROOK_RULE;
-    case Board.QUEEN  -> QUEEN_RULE;
-    case Board.KING   -> KING_RULE;
-    default           -> ctx -> false;
+      case Board.PAWN -> PAWN_RULE;
+      case Board.KNIGHT -> KNIGHT_RULE;
+      case Board.BISHOP -> BISHOP_RULE;
+      case Board.ROOK -> ROOK_RULE;
+      case Board.QUEEN -> QUEEN_RULE;
+      case Board.KING -> KING_RULE;
+      default -> ctx -> false;
     };
   }
 }

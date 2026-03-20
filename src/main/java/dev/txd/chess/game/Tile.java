@@ -1,10 +1,10 @@
 package dev.txd.chess.game;
 
 public class Tile {
-  private int column, row;
-  public Tile(int column, int row) {
-    this.column = column;
+  private int row, column;
+  public Tile(int row, int column) {
     this.row = row;
+    this.column = column;
   }
   public int column() {
     return column;
@@ -21,7 +21,7 @@ public class Tile {
     if (!(o instanceof Tile))
       return false;
     Tile t = (Tile) o;
-    return t.column() == column && t.row() == row;
+    return t.row() == row && t.column() == column;
   }
 
   @Override

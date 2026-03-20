@@ -7,15 +7,15 @@ public final class ChessMatch {
   private boolean enforceRules = true;
 
   private Board board;
-  private MatchResult matchResult;
+  private MatchStatus matchStatus;
   private MatchRecord matchRecord;
   private boolean whiteTurn;
 
   public ChessMatch() {
     this.enforceRules = true;
-    matchResult = MatchResult.ONGOING;
+    matchStatus = MatchStatus.ONGOING;
     board = new Board();
-    board.resetBoard();
+    board.setupStartingBoard();
     matchRecord = new MatchRecord();
     whiteTurn = true;
   }
@@ -25,13 +25,13 @@ public final class ChessMatch {
   }
 
   public void move(Move move) {
-    boolean isMoveLegal = move.isValid(this); 
+    boolean isMoveLegal = move.isValid(this);
     if (enforceRules)
       if (!isMoveLegal(move))
         throw new IllegalArgumentException("Invalid move");
     board.setPieceAt(move.from().row(), move.from().column(), Board.EMPTY);
     board.setPieceAt(move.to().row(), move.to().column(), board.pieceAt(move.from().row(), move.from().column()));
-    matchRecord.addMoveRecord(move, isMoveLegal, board, System.currentTimeMillis());
+    matchRecord.addMoveRecord(move, board, System.currentTimeMillis());
   }
 
   public boolean isMoveLegal(Move move) {
@@ -43,7 +43,7 @@ public final class ChessMatch {
     if (!isInBounds(from) || !isInBounds(to))
       return false;
 
-    int movedPiece = board.pieceAt(from.row(), from.column()); 
+    int movedPiece = board.pieceAt(from.row(), from.column());
     if (movedPiece == Board.EMPTY)
       return false;
 
@@ -67,8 +67,8 @@ public final class ChessMatch {
   public ArrayList<Tile> validMoves(Tile from) {
     ArrayList<Tile> validMoves = new ArrayList<>();
 
-    for (int c = 0; c < Board.BOARD_SIZE; c++)
-      for (int r = 0; r < Board.BOARD_SIZE; r++) {
+    for (int c = 0; c < Board.SIZE; c++)
+      for (int r = 0; r < Board.SIZE; r++) {
         Tile to = new Tile(r, c);
         Move move = new Move(from, to);
         if (isMoveLegal(move))
@@ -78,8 +78,12 @@ public final class ChessMatch {
 
   }
 
+  public MatchStatus status(){
+    return matchStatus;
+  }
+
   private boolean isInBounds(Tile tile) {
-    return tile.column() >= 0 && tile.column() < Board.BOARD_SIZE && tile.row() >= 0 && tile.row() < Board.BOARD_SIZE;
+    return tile.column() >= 0 && tile.column() < Board.SIZE && tile.row() >= 0 && tile.row() < Board.SIZE;
   }
 
   private boolean isPathClear(Move move) {
