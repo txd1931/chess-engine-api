@@ -3,31 +3,27 @@ package dev.txd.chess.game;
 public class Board {
   public final static int BOARD_SIZE = 8;
 
-  public static final byte WHITE_KING = 6;
-  public static final byte WHITE_QUEEN = 5;
-  public static final byte WHITE_ROOK = 4;
-  public static final byte WHITE_BISHOP = 3;
-  public static final byte WHITE_KNIGHT = 2;
-  public static final byte WHITE_PAWN = 1;
   public static final byte EMPTY = 0;
-  public static final byte BLACK_PAWN = -1;
-  public static final byte BLACK_KNIGHT = -2;
-  public static final byte BLACK_BISHOP = -3;
-  public static final byte BLACK_ROOK = -4;
-  public static final byte BLACK_QUEEN = -5;
-  public static final byte BLACK_KING = -6;
+  public static final byte PAWN = 1;
+  public static final byte KNIGHT = 2;
+  public static final byte BISHOP = 3;
+  public static final byte ROOK = 4;
+  public static final byte QUEEN = 5;
+  public static final byte KING = 6;
+
 
   public static final byte[][] STARTING_BOARD = new byte[][]{
-      {BLACK_ROOK, BLACK_KNIGHT, BLACK_BISHOP, BLACK_QUEEN, BLACK_KING, BLACK_BISHOP, BLACK_KNIGHT, BLACK_ROOK},
-      {BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN, BLACK_PAWN},
-      {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
-      {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
-      {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
-      {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
-      {WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN, WHITE_PAWN},
-      {WHITE_ROOK, WHITE_KNIGHT, WHITE_BISHOP, WHITE_QUEEN, WHITE_KING, WHITE_BISHOP, WHITE_KNIGHT, WHITE_ROOK}};
+    { -ROOK, -KNIGHT, -BISHOP, -QUEEN, -KING, -BISHOP, -KNIGHT, -ROOK },
+    { -PAWN, -PAWN, -PAWN, -PAWN, -PAWN, -PAWN, -PAWN, -PAWN },
+    { EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY },
+    { EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY },
+    { EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY },
+    { EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY },
+    { PAWN, PAWN, PAWN, PAWN, PAWN, PAWN, PAWN, PAWN },
+    { ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK }
+  };
 
-  private byte[][] boardData;
+private byte[][] boardData;
 
   public void fillBOard(byte[][] boardData) {
     this.boardData = boardData;

@@ -14,6 +14,7 @@ public final class ChessMatch {
   public ChessMatch() {
     this.enforceRules = true;
     matchResult = MatchResult.ONGOING;
+    board = new Board();
     board.resetBoard();
     matchRecord = new MatchRecord();
     whiteTurn = true;
@@ -23,20 +24,65 @@ public final class ChessMatch {
     enforceRules = cheatPermision;
   }
 
-  public void move(int fromColumn, int fromRow, int toColumn, int toRow) {
-    if (!isMoveLegal(fromColumn, fromRow, toColumn, toRow))
-      throw new IllegalArgumentException("Invalid move");
+  public void move(Move move) {
+    if (!isMoveLegal(move)) {
+      if (enforceRules)
+        throw new IllegalArgumentException("Invalid move");
+    }
   }
 
-  public boolean isMoveLegal(int fromColumn, int fromRow, int toColumn, int toRow) {
-    return true;
+  public boolean isMoveLegal(Move move) {
+    if (move == null || move.from() == null || move.to() == null)
+      throw new IllegalArgumentException("Move and its tiles cannot be null");
+    Tile from = move.from();
+    Tile to = move.to();
+    
+    if (!isInBounds(from) || !isInBounds(to))
+      return false;
+    
+    int movedPiece = board.pieceAt(from.row(), from.column());
+    if (movedPiece == Board.EMPTY)
+      return false;
+
+    boolean isWhite = movedPiece > 0;
+    if (isWhite != whiteTurn)
+      return false;
+
+    int targetPiece = board.pieceAt(to.row(), to.column());
+    if (targetPiece != Board.EMPTY && (targetPiece > 0) == isWhite)
+      return false;
+
+    int distX = to.column() - from.column();
+    int distY = to.row() - from.row();
+
+    PieceMoveRules.MoveContext context = new PieceMoveRules.MoveContext(move, distX, distY,         isWhite, targetPiece, board, this::isPathClear);
+
+    return PieceMoveRules.ruleForPiece(Math.abs(movedPiece)).test(context);
   }
 
   public ArrayList<Tile> validMoves() {
     return new ArrayList<>();
   }
 
-  private void initialize(boolean cheatPermission) {
+  private boolean isInBounds(Tile tile) {
+    return tile.column() >= 0 && tile.column() < Board.BOARD_SIZE && tile.row() >= 0 && tile.row() < Board.BOARD_SIZE;
+  }
 
+  private boolean isPathClear(Move move) {
+    Tile from = move.from();
+    Tile to = move.to();
+    int colStep = Integer.compare(to.column(), from.column());
+    int rowStep = Integer.compare(to.row(), from.row());
+
+    int currentCol = from.column() + colStep;
+    int currentRow = from.row() + rowStep;
+
+    while (currentCol != to.column() || currentRow != to.row()) {
+      if (board.pieceAt(currentRow, currentCol) != Board.EMPTY)
+        return false;
+      currentCol += colStep;
+      currentRow += rowStep;
+    }
+    return true;
   }
 }

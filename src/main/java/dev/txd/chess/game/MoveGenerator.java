@@ -4,5 +4,5 @@ import java.util.List;
 
 @FunctionalInterface
 public interface MoveGenerator {
-  List<Move> generateMoves(ChessMatch match);
+  List<Move> generateMoves(Board board, Tile tile);
 }
