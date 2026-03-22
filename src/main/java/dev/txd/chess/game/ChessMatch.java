@@ -11,27 +11,68 @@ public final class ChessMatch {
   private MatchRecord matchRecord;
   private boolean whiteTurn;
 
-  public ChessMatch() {
-    this.enforceRules = true;
+  public ChessMatch(boolean enforceRules, boolean trackTurnDuration) {
+    this.enforceRules = enforceRules;
     matchStatus = MatchStatus.ONGOING;
     board = new Board();
     board.setupStartingBoard();
-    matchRecord = new MatchRecord();
+    matchRecord = new MatchRecord(trackTurnDuration);
     whiteTurn = true;
   }
 
-  public void setCheats(boolean cheatPermision) {
-    enforceRules = cheatPermision;
+  public void setEnforceRules(boolean enforceRules) {
+    this.enforceRules = enforceRules;
+  }
+
+  public boolean getEnforceRules() {
+    return enforceRules;
+  }
+
+  public Board getBoard() {
+    return board;
+  }
+
+  public MatchRecord getMatchRecord() {
+    return matchRecord;
+  }
+
+  public void switchTurn() {
+    if (enforceRules)
+      throw new UnsupportedOperationException("Direct board changes are not allowed when rules enforcement is enabled");
+    whiteTurn = !whiteTurn;
+  }
+
+  public boolean isWhiteTurn() {
+    return whiteTurn;
+  }
+
+  public MatchStatus getStatus() {
+    return matchStatus;
+  }
+
+  public void resign() {
+    matchStatus = whiteTurn ? MatchStatus.BLACK_WINS : MatchStatus.WHITE_WINS;
+  }
+
+  public void updateBoard(Board newBoard){
+    if (enforceRules)
+      throw new UnsupportedOperationException("Direct board changes are not allowed when rules enforcement is enabled");
+    if (newBoard == null)
+      throw new IllegalArgumentException("New board cannot be null");
+    board = newBoard;
+    matchRecord.addMoveRecord(newBoard);
   }
 
   public void move(Move move) {
-    boolean isMoveLegal = move.isValid(this);
+    if (move == null || move.from() == null || move.to() == null)
+      throw new IllegalArgumentException("Move and its tiles cannot be null");
     if (enforceRules)
       if (!isMoveLegal(move))
         throw new IllegalArgumentException("Invalid move");
     board.setPieceAt(move.from().row(), move.from().column(), Board.EMPTY);
     board.setPieceAt(move.to().row(), move.to().column(), board.pieceAt(move.from().row(), move.from().column()));
-    matchRecord.addMoveRecord(move, board, System.currentTimeMillis());
+    switchTurn();
+    matchRecord.addMoveRecord(move, board);
   }
 
   public boolean isMoveLegal(Move move) {
@@ -64,9 +105,10 @@ public final class ChessMatch {
     return PieceMoveRules.ruleForPiece(Math.abs(movedPiece)).test(context);
   }
 
+
+
   public ArrayList<Tile> validMoves(Tile from) {
     ArrayList<Tile> validMoves = new ArrayList<>();
-
     for (int c = 0; c < Board.SIZE; c++)
       for (int r = 0; r < Board.SIZE; r++) {
         Tile to = new Tile(r, c);
@@ -75,11 +117,6 @@ public final class ChessMatch {
           validMoves.add(to);
       }
     return validMoves;
-
-  }
-
-  public MatchStatus status(){
-    return matchStatus;
   }
 
   private boolean isInBounds(Tile tile) {

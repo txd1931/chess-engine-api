@@ -36,14 +36,14 @@ final class PieceMoveRules {
   public static final Predicate<MoveContext> ROOK_RULE = ctx -> (ctx.distX() == 0 || ctx.distY() == 0)
       && ctx.pathClearChecker().test(ctx.move());
 
-  public static final Predicate<MoveContext> QUEEN_RULE = ctx -> ((Math.abs(ctx.distX()) == Math.abs(ctx.distY()))
+  /*public static final Predicate<MoveContext> QUEEN_RULE = ctx -> ((Math.abs(ctx.distX()) == Math.abs(ctx.distY()))
       || (ctx.distX() == 0 || ctx.distY() == 0)) && ctx.pathClearChecker().test(ctx.move());
+  */
+  public static final Predicate<MoveContext> QUEEN_RULE = ctx -> ROOK_RULE.test(ctx) || BISHOP_RULE.test(ctx);
 
   public static final Predicate<MoveContext> KING_RULE = ctx -> Math.abs(ctx.distX()) <= 1 && Math.abs(ctx.distY()) <= 1
       && (Math.abs(ctx.distX()) + Math.abs(ctx.distY()) > 0);
 
-  private PieceMoveRules() {
-  }
 
   public static Predicate<MoveContext> ruleForPiece(int absPieceType) {
     return switch (absPieceType) {

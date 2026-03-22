@@ -1,6 +1,6 @@
 package dev.txd.chess.game;
 
-class Move {
+public class Move {
   private Tile from, to;
 
   public Move(Tile from, Tile to) {

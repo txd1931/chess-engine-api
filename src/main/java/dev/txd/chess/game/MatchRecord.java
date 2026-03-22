@@ -28,6 +28,10 @@ class MatchRecord {
     closed = true;
   }
 
+  public void addMoveRecord(Board board) {
+    addMoveRecord(null, board);
+  }
+
   public void addMoveRecord(MatchStamp stamp) {
     stamps.add(stamp);
   }
