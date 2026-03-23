@@ -1,6 +1,7 @@
 package dev.txd.chess.game;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public class Board {
   public final static int SIZE = 8;
@@ -170,12 +171,12 @@ public class Board {
     return white ? whiteKing : blackKing;
   }
 
-  public Tile[] pawnsToPromote(boolean forWhite) {
+  public Optional<Tile[]> pawnsToPromote(boolean forWhite) {
     Tile[] pawnsToPromote = new Tile[SIZE];
     for (int c = 0; c < SIZE; c++)
       if ((forWhite && boardData[c][0] == PAWN) || (!forWhite && boardData[c][7] == -PAWN))
         pawnsToPromote[c] = new Tile(c, forWhite ? 0 : 7);
-    return pawnsToPromote;
+    return Optional.of(pawnsToPromote);
   }
 
   private void validateTile(int column, int row) {

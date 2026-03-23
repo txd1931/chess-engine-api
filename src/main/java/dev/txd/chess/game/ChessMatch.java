@@ -155,10 +155,12 @@ public final class ChessMatch {
   }
 
   public Optional<Tile[]> checkmate(boolean forWhite) {
+    if(forWhite != whiteTurn)
+      throw new IllegalStateException("Cannot check for checkmate of the player whose turn it is not");
     Tile kingTile = board.getKing(forWhite);
     ArrayList<Tile> possibleKingPositions = validMoves(kingTile);
     boolean kingIsObligatedToMove = false;
-    if (board.piecesCount(forWhite) != 1 && board.pawnsToPromote(forWhite).length == 0) {
+    if (board.piecesCount(forWhite) != 1 && board.pawnsToPromote(forWhite).orElse(new Tile[0]).length == 0) {
       Tile[] pieces = board.pieces(forWhite);
       int validMovesCount = 0;
       for (Tile piece : pieces) {
@@ -191,6 +193,10 @@ public final class ChessMatch {
     move.validate();
     Tile from = move.from();
     Tile to = move.to();
+
+    if(Math.abs(to.column() - from.column()) <= 1 && Math.abs(to.row() - from.row()) <= 1)
+      return true; 
+
     int colStep = Integer.compare(to.column(), from.column());
     int rowStep = Integer.compare(to.row(), from.row());
 
