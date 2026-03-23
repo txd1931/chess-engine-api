@@ -2,16 +2,22 @@ package dev.txd.chess.game;
 
 public class Tile {
   private int row, column;
-  public Tile(int row, int column) {
-    this.row = row;
+  public Tile(int column , int row) {
     this.column = column;
+    this.row = row;
   }
+  
   public int column() {
     return column;
   }
 
   public int row() {
     return row;
+  }
+
+  public void validate() {
+    if (row < 0 || row >= Board.SIZE || column < 0 || column >= Board.SIZE)
+      throw new IllegalArgumentException("Tile coordinates must be between 0 and " + (Board.SIZE - 1));
   }
 
   @Override

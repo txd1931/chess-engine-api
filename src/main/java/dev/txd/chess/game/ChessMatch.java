@@ -1,18 +1,24 @@
 package dev.txd.chess.game;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 public final class ChessMatch {
-
   private boolean enforceRules = true;
 
   private Board board;
+  private ArrayList<Integer> capturedPieces;
   private MatchStatus matchStatus;
   private MatchRecord matchRecord;
   private boolean whiteTurn;
+  
+  public ChessMatch() {
+    this(true, true);
+  }
 
   public ChessMatch(boolean enforceRules, boolean trackTurnDuration) {
     this.enforceRules = enforceRules;
+    capturedPieces = new ArrayList<>();
     matchStatus = MatchStatus.ONGOING;
     board = new Board();
     board.setupStartingBoard();
@@ -64,25 +70,22 @@ public final class ChessMatch {
   }
 
   public void move(Move move) {
-    if (move == null || move.from() == null || move.to() == null)
-      throw new IllegalArgumentException("Move and its tiles cannot be null");
+    move.validate();
     if (enforceRules)
       if (!isMoveLegal(move))
         throw new IllegalArgumentException("Invalid move");
     board.setPieceAt(move.from().row(), move.from().column(), Board.EMPTY);
+    if (board.pieceAt(move.to().row(), move.to().column()) != Board.EMPTY)
+      capturedPieces.add(board.pieceAt(move.to().row(), move.to().column()));
     board.setPieceAt(move.to().row(), move.to().column(), board.pieceAt(move.from().row(), move.from().column()));
     switchTurn();
     matchRecord.addMoveRecord(move, board);
   }
 
   public boolean isMoveLegal(Move move) {
-    if (move == null || move.from() == null || move.to() == null)
-      throw new IllegalArgumentException("Move and its tiles cannot be null");
+    move.validate();
     Tile from = move.from();
     Tile to = move.to();
-
-    if (!isInBounds(from) || !isInBounds(to))
-      return false;
 
     int movedPiece = board.pieceAt(from.row(), from.column());
     if (movedPiece == Board.EMPTY)
@@ -105,25 +108,87 @@ public final class ChessMatch {
     return PieceMoveRules.ruleForPiece(Math.abs(movedPiece)).test(context);
   }
 
-
-
   public ArrayList<Tile> validMoves(Tile from) {
+    from.validate();
     ArrayList<Tile> validMoves = new ArrayList<>();
-    for (int c = 0; c < Board.SIZE; c++)
+    for (int c = 0; c < Board.SIZE; c++){
       for (int r = 0; r < Board.SIZE; r++) {
-        Tile to = new Tile(r, c);
+        Tile to = new Tile(c, r);
         Move move = new Move(from, to);
         if (isMoveLegal(move))
           validMoves.add(to);
       }
+    }
     return validMoves;
   }
 
-  private boolean isInBounds(Tile tile) {
-    return tile.column() >= 0 && tile.column() < Board.SIZE && tile.row() >= 0 && tile.row() < Board.SIZE;
+  public int pieceCapturedFromMove(Move move) {
+    move.validate();
+    if (isMoveLegal(move)){
+      return board.pieceAt(move.to().row(), move.to().column());
+    } else {
+      return -1;
+    }
+  }
+
+  public ArrayList<Tile> validMoves(int row, int column) {
+    return validMoves(new Tile(column, row));
+  }
+
+  public Optional<Tile[]> check(boolean forWhite) {
+    return check(forWhite, board.getKing(forWhite));
+  }
+
+  private Optional<Tile[]> check(boolean forWhite, Tile kingTile){
+    ArrayList<Tile> possibleThreats = new ArrayList<>();
+    for (int c = 0; c < Board.SIZE; c++){
+      for (int r = 0; r < Board.SIZE; r++) {
+        Tile from = new Tile(c, r);
+        Move move = new Move(from, kingTile);
+        if (isMoveLegal(move))
+          possibleThreats.add(from);
+      }
+    }
+    if (possibleThreats.size() > 0)
+      return Optional.of(possibleThreats.toArray(new Tile[possibleThreats.size()]));
+    return Optional.empty();
+  }
+
+  public Optional<Tile[]> checkmate(boolean forWhite) {
+    Tile kingTile = board.getKing(forWhite);
+    ArrayList<Tile> possibleKingPositions = validMoves(kingTile);
+    boolean kingIsObligatedToMove = false;
+    if (board.piecesCount(forWhite) != 1 && board.pawnsToPromote(forWhite).length == 0) {
+      Tile[] pieces = board.pieces(forWhite);
+      int validMovesCount = 0;
+      for (Tile piece : pieces) {
+        validMovesCount += validMoves(piece).size();
+        if (validMovesCount - validMoves(kingTile).size() > 0) {
+          kingIsObligatedToMove = true;
+        }
+      }
+    }
+    if (kingIsObligatedToMove)
+      possibleKingPositions.add(kingTile);
+
+    ArrayList<Tile> possibleThreats = new ArrayList<>();
+    for(Tile possibleKingPosition : possibleKingPositions){
+      Tile[] specificPossibleThreats  = check(forWhite, possibleKingPosition).orElse(new Tile[0]);
+      for(Tile possibleThreat : specificPossibleThreats){
+        possibleThreats.add(possibleThreat);
+      }
+    }
+    if (possibleThreats.size() > 0)
+      return Optional.of(possibleThreats.toArray(new Tile[possibleThreats.size()]));
+    return Optional.empty();
+  }
+
+  public ArrayList<Integer> getCapturedPieces() {
+    return capturedPieces;
   }
 
   private boolean isPathClear(Move move) {
+    move.validate();
     Tile from = move.from();
     Tile to = move.to();
     int colStep = Integer.compare(to.column(), from.column());

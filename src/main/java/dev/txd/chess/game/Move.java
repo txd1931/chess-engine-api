@@ -16,6 +16,13 @@ public class Move {
     return to;
   }
 
+  public void validate() {
+    if (from == null || to == null)
+      throw new IllegalArgumentException("Move tiles cannot be null");
+    from.validate();
+    to.validate();
+  }
+
   public boolean isValid(ChessMatch match) {
     return match.isMoveLegal(this);
   }
