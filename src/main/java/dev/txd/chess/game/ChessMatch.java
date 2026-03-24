@@ -108,7 +108,7 @@ public final class ChessMatch {
     board.setPieceAt(toColumn, toRow, board.pieceAt(fromColumn, fromRow));
     board.setPieceAt(fromColumn, fromRow, Board.EMPTY);
     switchTurnInternal();
-    matchRecord.addMoveRecord(new Move(PackedTile.toTile(from), PackedTile.toTile(to)), board);
+    matchRecord.addMoveRecord(from, to, board);
   }
 
   public boolean isMoveLegal(Move move) {
@@ -201,15 +201,14 @@ public final class ChessMatch {
     byte kingTile = board.getKingPacked(forWhite);
     ArrayList<Byte> possibleKingPositions = validMoves(kingTile);
     boolean kingIsObligatedToMove = false;
-    if (board.piecesCount(forWhite) != 1 && board.pawnsToPromote(forWhite).orElse(new Tile[0]).length == 0) {
-      Tile[] pieces = board.pieces(forWhite);
+    if (board.piecesCount(forWhite) != 1 && board.pawnsToPromotePacked(forWhite).length == 0) {
+      byte[] pieces = board.piecesPacked(forWhite);
       int validMovesCount = 0;
-      for (Tile piece : pieces) {
-        if (piece == null)
-          continue;
-        validMovesCount += validMoves(PackedTile.fromTile(piece)).size();
+      for (byte piece : pieces) {
+        validMovesCount += validMoves(piece).size();
         if (validMovesCount - validMoves(kingTile).size() > 0) {
           kingIsObligatedToMove = true;
+          break;
         }
       }
     }

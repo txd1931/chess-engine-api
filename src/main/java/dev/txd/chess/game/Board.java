@@ -33,11 +33,22 @@ public class Board {
   public Board() {}
   
   Board(Board other) {
-    this.boardData = other.boardData;
+    this.boardData = copyBoardData(other.boardData);
     this.whiteCount = other.whiteCount;
     this.blackCount = other.blackCount;
     this.whiteKing = other.whiteKing;
     this.blackKing = other.blackKing;
+  }
+
+  private static byte[][] copyBoardData(byte[][] source) {
+    if (source == null)
+      return null;
+    byte[][] copy = new byte[source.length][];
+    for (int i = 0; i < source.length; i++) {
+      copy[i] = new byte[source[i].length];
+      System.arraycopy(source[i], 0, copy[i], 0, source[i].length);
+    }
+    return copy;
   }
 
   public void initBoard() {
@@ -95,20 +106,18 @@ public class Board {
   }
 
   public Tile[] occupiedTiles() {
-    Tile[] occupied = new Tile[piecesCount()];
-    for (int c = 0; c < SIZE; c++)
-      for (int r = 0; r < SIZE; r++)
-        if (boardData[c][r] != EMPTY)
-          occupied[c * SIZE + r] = new Tile(c, r);
+    byte[] packed = occupiedTilesPacked();
+    Tile[] occupied = new Tile[packed.length];
+    for (int i = 0; i < packed.length; i++)
+      occupied[i] = PackedTile.toTile(packed[i]);
     return occupied;
   }
 
   public Tile[] emptyTiles() {
-    Tile[] empty = new Tile[SIZE * SIZE - piecesCount()];
-    for (int c = 0; c < SIZE; c++)
-      for (int r = 0; r < SIZE; r++)
-        if (boardData[c][r] == EMPTY)
-          empty[c * SIZE + r] = new Tile(c, r);
+    byte[] packed = emptyTilesPacked();
+    Tile[] empty = new Tile[packed.length];
+    for (int i = 0; i < packed.length; i++)
+      empty[i] = PackedTile.toTile(packed[i]);
     return empty;
   }
 
@@ -121,20 +130,18 @@ public class Board {
   }
 
   public Tile[] pieces(){
-    Tile[] pieces = new Tile[piecesCount()];
-    for (int c = 0; c < SIZE; c++)
-      for (int r = 0; r < SIZE; r++)
-        if (boardData[c][r] != EMPTY)
-          pieces[c * SIZE + r] = new Tile(c, r);
+    byte[] packed = piecesPacked();
+    Tile[] pieces = new Tile[packed.length];
+    for (int i = 0; i < packed.length; i++)
+      pieces[i] = PackedTile.toTile(packed[i]);
     return pieces;
   }
 
   public Tile[] pieces(boolean forWhite){
-    Tile[] pieces = new Tile[piecesCount(forWhite)];
-    for (int c = 0; c < SIZE; c++)
-      for (int r = 0; r < SIZE; r++)
-        if ((forWhite && boardData[c][r] > 0) || (!forWhite && boardData[c][r] < 0))
-          pieces[c * SIZE + r] = new Tile(c, r);
+    byte[] packed = piecesPacked(forWhite);
+    Tile[] pieces = new Tile[packed.length];
+    for (int i = 0; i < packed.length; i++)
+      pieces[i] = PackedTile.toTile(packed[i]);
     return pieces;
   }
 
@@ -197,11 +204,68 @@ public class Board {
   }
 
   public Optional<Tile[]> pawnsToPromote(boolean forWhite) {
-    Tile[] pawnsToPromote = new Tile[SIZE];
-    for (int c = 0; c < SIZE; c++)
-      if ((forWhite && boardData[c][0] == PAWN) || (!forWhite && boardData[c][7] == -PAWN))
-        pawnsToPromote[c] = new Tile(c, forWhite ? 0 : 7);
+    byte[] packed = pawnsToPromotePacked(forWhite);
+    Tile[] pawnsToPromote = new Tile[packed.length];
+    for (int i = 0; i < packed.length; i++)
+      pawnsToPromote[i] = PackedTile.toTile(packed[i]);
     return Optional.of(pawnsToPromote);
+  }
+
+  byte[] occupiedTilesPacked() {
+    byte[] occupied = new byte[piecesCount()];
+    int index = 0;
+    for (int c = 0; c < SIZE; c++) {
+      for (int r = 0; r < SIZE; r++) {
+        if (boardData[c][r] != EMPTY)
+          occupied[index++] = PackedTile.encode(c, r);
+      }
+    }
+    return occupied;
+  }
+
+  byte[] emptyTilesPacked() {
+    byte[] empty = new byte[(SIZE * SIZE) - piecesCount()];
+    int index = 0;
+    for (int c = 0; c < SIZE; c++) {
+      for (int r = 0; r < SIZE; r++) {
+        if (boardData[c][r] == EMPTY)
+          empty[index++] = PackedTile.encode(c, r);
+      }
+    }
+    return empty;
+  }
+
+  byte[] piecesPacked() {
+    return occupiedTilesPacked();
+  }
+
+  byte[] piecesPacked(boolean forWhite) {
+    byte[] pieces = new byte[piecesCount(forWhite)];
+    int index = 0;
+    for (int c = 0; c < SIZE; c++) {
+      for (int r = 0; r < SIZE; r++) {
+        if ((forWhite && boardData[c][r] > 0) || (!forWhite && boardData[c][r] < 0))
+          pieces[index++] = PackedTile.encode(c, r);
+      }
+    }
+    return pieces;
+  }
+
+  byte[] pawnsToPromotePacked(boolean forWhite) {
+    byte[] pawns = new byte[SIZE];
+    int index = 0;
+    int promotionRow = forWhite ? 0 : 7;
+    int pawnValue = forWhite ? PAWN : -PAWN;
+    for (int c = 0; c < SIZE; c++) {
+      if (boardData[c][promotionRow] == pawnValue)
+        pawns[index++] = PackedTile.encode(c, promotionRow);
+    }
+    if (index == pawns.length)
+      return pawns;
+
+    byte[] compact = new byte[index];
+    System.arraycopy(pawns, 0, compact, 0, index);
+    return compact;
   }
 
   private void validateTile(int column, int row) {

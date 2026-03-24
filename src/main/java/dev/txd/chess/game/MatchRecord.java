@@ -14,13 +14,23 @@ class MatchRecord {
     closed = false;
   }
 
-  void addMoveRecord(Move move, Board board) {
+  void addMoveRecord(byte fromTile, byte toTile, Board board) {
     if(closed)
       throw new IllegalStateException("Cannot add move record to a closed MatchRecord");
-    if(move == null && board == null)
+    if(fromTile == PackedTile.NO_TILE && toTile == PackedTile.NO_TILE && board == null)
       throw new IllegalArgumentException("Move and Board cannot be null simultaneously");
     long turnDuration = stamps.isEmpty() ? (trackTurnDuration ? System.currentTimeMillis() : 0) : 0;
-    stamps.add(new MatchStamp(move, board, turnDuration));
+    Board boardSnapshot = board == null ? null : new Board(board);
+    stamps.add(new MatchStamp(fromTile, toTile, boardSnapshot, turnDuration));
+  }
+
+  void addMoveRecord(Move move, Board board) {
+    if (move == null) {
+      addMoveRecord(PackedTile.NO_TILE, PackedTile.NO_TILE, board);
+      return;
+    }
+    move.validate();
+    addMoveRecord(PackedTile.fromTile(move.from()), PackedTile.fromTile(move.to()), board);
   }
 
   void closeRecordings() {
@@ -28,18 +38,29 @@ class MatchRecord {
     closed = true;
   }
 
-  public void addMoveRecord(Board board) {
-    addMoveRecord(null, board);
+  void addMoveRecord(Board board) {
+    addMoveRecord(PackedTile.NO_TILE, PackedTile.NO_TILE, board);
   }
 
-  public void addMoveRecord(MatchStamp stamp) {
-    stamps.add(stamp);
+  void addMoveRecord(MatchStamp stamp) {
+    if (closed)
+      throw new IllegalStateException("Cannot add move record to a closed MatchRecord");
+    if (stamp == null)
+      throw new IllegalArgumentException("Stamp cannot be null");
+    Board boardSnapshot = stamp.board() == null ? null : new Board(stamp.board());
+    stamps.add(new MatchStamp(stamp.fromTile(), stamp.toTile(), boardSnapshot, stamp.timestamp()));
   }
 
   public byte[][][] generateMatchTensor() {
-    byte[][][] matchTensor = new byte[Board.SIZE][Board.SIZE][stamps.size()];
-    for (int i = 0; i < stamps.size(); i++)
-      matchTensor[i] = stamps.get(i).board().getBoardData();
+    byte[][][] matchTensor = new byte[stamps.size()][Board.SIZE][Board.SIZE];
+    for (int i = 0; i < stamps.size(); i++) {
+      Board stampBoard = stamps.get(i).board();
+      if (stampBoard == null)
+        continue;
+      byte[][] source = stampBoard.getBoardData();
+      for (int c = 0; c < Board.SIZE; c++)
+        System.arraycopy(source[c], 0, matchTensor[i][c], 0, Board.SIZE);
+    }
     return matchTensor;
   }
 
@@ -61,9 +82,10 @@ class MatchRecord {
     Board board = new Board();
     if (index < 0 || index >= stamps.size())
       throw new IndexOutOfBoundsException("Index out of bounds: " + index);
+
     MatchStamp stamp = stamps.get(index);
     if (stamp.board() != null)
-      return stamp.board();
+      return new Board(stamp.board());
 
     int lastRecordedBoardIndex = -1;
     for (int i = index; i >= 0; i--) {
@@ -73,15 +95,27 @@ class MatchRecord {
         break;
       }
     }
+
     if (lastRecordedBoardIndex == -1) {
       board.setupStartingBoard();
       return board;
     }
+
     for (int i = lastRecordedBoardIndex + 1; i <= index; i++) {
-      board.setPieceAt(stamps.get(i).move().from().row(), stamps.get(i).move().from().column(),
-          stamps.get(i).board().pieceAt(stamps.get(i).move().from().row(), stamps.get(i).move().from().column()));
+      MatchStamp moveStamp = stamps.get(i);
+      if (!moveStamp.hasMove())
+        continue;
+
+      int fromColumn = PackedTile.column(moveStamp.fromTile());
+      int fromRow = PackedTile.row(moveStamp.fromTile());
+      int toColumn = PackedTile.column(moveStamp.toTile());
+      int toRow = PackedTile.row(moveStamp.toTile());
+
+      int movingPiece = board.pieceAt(fromColumn, fromRow);
+      board.setPieceAt(toColumn, toRow, movingPiece);
+      board.setPieceAt(fromColumn, fromRow, Board.EMPTY);
     }
-    return board;
+    return new Board(board);
   }
 
   public boolean validateMoves() {
