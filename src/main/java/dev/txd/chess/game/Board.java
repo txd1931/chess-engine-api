@@ -15,8 +15,8 @@ public class Board {
 
   private int whiteCount;
   private int blackCount;
-  private Tile whiteKing;
-  private Tile blackKing;
+  private byte whiteKing = PackedTile.NO_TILE;
+  private byte blackKing = PackedTile.NO_TILE;
 
   public static final byte[][] STARTING_BOARD = new byte[][] {
       { -ROOK, -KNIGHT, -BISHOP, -QUEEN, -KING, -BISHOP, -KNIGHT, -ROOK },
@@ -34,6 +34,10 @@ public class Board {
   
   Board(Board other) {
     this.boardData = other.boardData;
+    this.whiteCount = other.whiteCount;
+    this.blackCount = other.blackCount;
+    this.whiteKing = other.whiteKing;
+    this.blackKing = other.blackKing;
   }
 
   public void initBoard() {
@@ -153,10 +157,18 @@ public class Board {
 
   public void setPieceAt(int column, int row, int piece) {
     validateTile(column, row);
-    if(pieceAt(column, row) == KING)
-      whiteKing = new Tile(column, row);
-    else if(pieceAt(column, row) == -KING)
-      blackKing = new Tile(column, row);
+    int currentPiece = pieceAt(column, row);
+
+    if (currentPiece == KING)
+      whiteKing = PackedTile.NO_TILE;
+    else if (currentPiece == -KING)
+      blackKing = PackedTile.NO_TILE;
+
+    if (currentPiece > 0)
+      whiteCount--;
+    else if (currentPiece < 0)
+      blackCount--;
+
     if (piece > 0) {
       if (boardData[column][row] <= 0)
         whiteCount++;
@@ -164,11 +176,24 @@ public class Board {
       if (boardData[column][row] >= 0)
         blackCount++;
     }
+
+    if (piece == KING)
+      whiteKing = PackedTile.encode(column, row);
+    else if (piece == -KING)
+      blackKing = PackedTile.encode(column, row);
+
     boardData[column][row] = (byte) piece;
   }
 
+  byte getKingPacked(boolean white) {
+    byte king = white ? whiteKing : blackKing;
+    if (king == PackedTile.NO_TILE)
+      throw new IllegalStateException("King not found on board");
+    return king;
+  }
+
   public Tile getKing(boolean white) {
-    return white ? whiteKing : blackKing;
+    return PackedTile.toTile(getKingPacked(white));
   }
 
   public Optional<Tile[]> pawnsToPromote(boolean forWhite) {
@@ -185,18 +210,18 @@ public class Board {
   }
 
   private void findKings() {
-    whiteKing = blackKing = null;
+    whiteKing = blackKing = PackedTile.NO_TILE;
     for (int c = 0; c < SIZE; c++) {
       for (int r = 0; r < SIZE; r++) {
         if (boardData[c][r] == KING) {
-          if (whiteKing != null)
+          if (whiteKing != PackedTile.NO_TILE)
             throw new IllegalStateException("Multiple white kings found on the board");
-          whiteKing = new Tile(c, r);
+          whiteKing = PackedTile.encode(c, r);
         }
         if (boardData[c][r] == -KING) {
-          if (blackKing != null)
+          if (blackKing != PackedTile.NO_TILE)
             throw new IllegalStateException("Multiple black kings found on the board");
-          blackKing = new Tile(c, r);
+          blackKing = PackedTile.encode(c, r);
         }
       }
     }

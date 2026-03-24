@@ -6,21 +6,23 @@ final class PieceMoveRules {
 
   @FunctionalInterface
   public interface PathClearChecker {
-    boolean test(Move move);
+    boolean test(byte fromTile, byte toTile);
   }
 
-  public record MoveContext(Move move, int distX, int distY, boolean isWhite, int targetPiece, Board board,
+  public record MoveContext(byte fromTile, byte toTile, int distX, int distY, boolean isWhite, int targetPiece, Board board,
       PathClearChecker pathClearChecker) {
   }
 
   public static final Predicate<MoveContext> PAWN_RULE = ctx -> {
     int direction = ctx.isWhite() ? -1 : 1;
     int startRow = ctx.isWhite() ? 6 : 1;
+    int fromRow = PackedTile.row(ctx.fromTile());
+    int fromColumn = PackedTile.column(ctx.fromTile());
 
     boolean oneStepForward = ctx.distX() == 0 && ctx.distY() == direction && ctx.targetPiece() == Board.EMPTY;
-    boolean twoStepForward = ctx.distX() == 0 && ctx.distY() == (2 * direction) && ctx.move.from().row() == startRow
+    boolean twoStepForward = ctx.distX() == 0 && ctx.distY() == (2 * direction) && fromRow == startRow
         && ctx.targetPiece() == Board.EMPTY
-        && ctx.board().pieceAt(ctx.move.from().row() + direction, ctx.move.from().column()) == Board.EMPTY;
+      && ctx.board().pieceAt(fromColumn, fromRow + direction) == Board.EMPTY;
     boolean diagonalCapture = Math.abs(ctx.distX()) == 1 && ctx.distY() == direction && ctx.targetPiece() != Board.EMPTY
         && (ctx.targetPiece() > 0) != ctx.isWhite();
 
@@ -31,10 +33,10 @@ final class PieceMoveRules {
       && Math.abs(ctx.distY()) == 1) || (Math.abs(ctx.distX()) == 1 && Math.abs(ctx.distY()) == 2);
 
   public static final Predicate<MoveContext> BISHOP_RULE = ctx -> Math.abs(ctx.distX()) == Math.abs(ctx.distY())
-      && ctx.pathClearChecker().test(ctx.move());
+      && ctx.pathClearChecker().test(ctx.fromTile(), ctx.toTile());
 
   public static final Predicate<MoveContext> ROOK_RULE = ctx -> (ctx.distX() == 0 || ctx.distY() == 0)
-      && ctx.pathClearChecker().test(ctx.move());
+      && ctx.pathClearChecker().test(ctx.fromTile(), ctx.toTile());
 
   /*public static final Predicate<MoveContext> QUEEN_RULE = ctx -> ((Math.abs(ctx.distX()) == Math.abs(ctx.distY()))
       || (ctx.distX() == 0 || ctx.distY() == 0)) && ctx.pathClearChecker().test(ctx.move());
