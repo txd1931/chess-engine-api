@@ -1,6 +1,5 @@
 package dev.txd.chess.game;
 
-import java.util.Arrays;
 import java.util.Optional;
 
 public class Board {
@@ -53,6 +52,7 @@ public class Board {
       }
     }
     this.boardData = boardData;
+    findKings();
   }
 
   public void setupStartingBoard() {

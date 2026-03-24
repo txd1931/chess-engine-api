@@ -1,6 +1,8 @@
 package dev.txd.chess.game;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public final class ChessMatch {
@@ -8,10 +10,11 @@ public final class ChessMatch {
 
   private Board board;
   private ArrayList<Integer> capturedPieces;
+  private Map<Tile, ArrayList<Tile>> validMovesCache = new HashMap<>();
   private MatchStatus matchStatus;
   private MatchRecord matchRecord;
   private boolean whiteTurn;
-  
+
   public ChessMatch() {
     this(true, true);
   }
@@ -48,6 +51,12 @@ public final class ChessMatch {
     whiteTurn = !whiteTurn;
   }
 
+  private void switchTurnInternal() {
+    whiteTurn = !whiteTurn;
+  }
+
+  private
+
   public boolean isWhiteTurn() {
     return whiteTurn;
   }
@@ -74,11 +83,11 @@ public final class ChessMatch {
     if (enforceRules)
       if (!isMoveLegal(move))
         throw new IllegalArgumentException("Invalid move");
-    board.setPieceAt(move.from().row(), move.from().column(), Board.EMPTY);
-    if (board.pieceAt(move.to().row(), move.to().column()) != Board.EMPTY)
-      capturedPieces.add(board.pieceAt(move.to().row(), move.to().column()));
-    board.setPieceAt(move.to().row(), move.to().column(), board.pieceAt(move.from().row(), move.from().column()));
-    switchTurn();
+    if (board.pieceAt(move.to().column(), move.to().row()) != Board.EMPTY)
+      capturedPieces.add(board.pieceAt(move.to().column(), move.to().row()));
+    board.setPieceAt(move.to().column(), move.to().row(), board.pieceAt(move.from().column(), move.from().row()));
+    board.setPieceAt(move.from().column(), move.from().row(), Board.EMPTY);
+    switchTurnInternal();
     matchRecord.addMoveRecord(move, board);
   }
 
@@ -87,7 +96,7 @@ public final class ChessMatch {
     Tile from = move.from();
     Tile to = move.to();
 
-    int movedPiece = board.pieceAt(from.row(), from.column());
+    int movedPiece = board.pieceAt(from.column(), from.row());
     if (movedPiece == Board.EMPTY)
       return false;
 
@@ -95,7 +104,7 @@ public final class ChessMatch {
     if (isWhite != whiteTurn)
       return false;
 
-    int targetPiece = board.pieceAt(to.row(), to.column());
+    int targetPiece = board.pieceAt(to.column(), to.row());
     if (targetPiece != Board.EMPTY && (targetPiece > 0) == isWhite)
       return false;
 
@@ -125,13 +134,13 @@ public final class ChessMatch {
   public int pieceCapturedFromMove(Move move) {
     move.validate();
     if (isMoveLegal(move)){
-      return board.pieceAt(move.to().row(), move.to().column());
+      return board.pieceAt(move.to().column(), move.to().row());
     } else {
       return -1;
     }
   }
 
-  public ArrayList<Tile> validMoves(int row, int column) {
+  public ArrayList<Tile> validMoves(int column, int row) {
     return validMoves(new Tile(column, row));
   }
 
@@ -204,7 +213,7 @@ public final class ChessMatch {
     int currentRow = from.row() + rowStep;
 
     while (currentCol != to.column() || currentRow != to.row()) {
-      if (board.pieceAt(currentRow, currentCol) != Board.EMPTY)
+      if (board.pieceAt(currentCol, currentRow) != Board.EMPTY)
         return false;
       currentCol += colStep;
       currentRow += rowStep;
