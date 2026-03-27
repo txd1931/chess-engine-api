@@ -27,6 +27,7 @@ public final class ChessMatch {
     board.setupStartingBoard();
     matchRecord = new MatchRecord(trackTurnDuration);
     whiteTurn = true;
+    rebuildValidMovesCache();
   }
 
   public void setEnforceRules(boolean enforceRules) {
@@ -57,10 +58,36 @@ public final class ChessMatch {
 
   private void rebuildValidMovesCache() {
     validMovesCache.clear();
-    for (int c = 0; c < Board.SIZE; c++) {
-      for (int r = 0; r < Board.SIZE; r++) {
-        byte from = PackedTile.encode(c, r);
-        validMovesCache.put(from, validMoves(from));
+    for (int fc = 0; fc < Board.SIZE; fc++) {
+      for (int fr = 0; fr < Board.SIZE; fr++) {
+        byte from = PackedTile.encode(fc, fr);
+        PackedTile.validate(from);
+        int movedPiece = board.pieceAt(PackedTile.column(from), PackedTile.row(from));
+        if (movedPiece == Board.EMPTY)
+          continue;
+        boolean isMovingWhite = movedPiece > 0;
+        if (isMovingWhite != whiteTurn)
+          continue;
+        for (int tc = 0; tc < Board.SIZE; tc++) {
+          for (int tr = 0; tr < Board.SIZE; tr++) {
+            byte to = PackedTile.encode(tc, tr);
+            PackedTile.validate(to);
+
+            int targetPiece = board.pieceAt(PackedTile.column(to), PackedTile.row(to));
+            if (targetPiece != Board.EMPTY && (targetPiece > 0) == isMovingWhite)
+              continue;
+
+            int distX = PackedTile.column(to) - PackedTile.column(from);
+            int distY = PackedTile.row(to) - PackedTile.row(from);
+
+            PieceMoveRules.MoveContext context = new PieceMoveRules.MoveContext(from, to, distX, distY, isMovingWhite, targetPiece, board,
+                this::isPathClear);
+
+            if(PieceMoveRules.ruleForPiece(Math.abs(movedPiece)).test(context)){
+              validMovesCache.computeIfAbsent(from, k -> new ArrayList<>()).add(to);
+            }
+          }
+        }
       }
     }
   }
@@ -83,6 +110,7 @@ public final class ChessMatch {
     if (newBoard == null)
       throw new IllegalArgumentException("New board cannot be null");
     board = newBoard;
+    rebuildValidMovesCache();
     matchRecord.addMoveRecord(newBoard);
   }
 
@@ -108,6 +136,7 @@ public final class ChessMatch {
     board.setPieceAt(toColumn, toRow, board.pieceAt(fromColumn, fromRow));
     board.setPieceAt(fromColumn, fromRow, Board.EMPTY);
     switchTurnInternal();
+    rebuildValidMovesCache();
     matchRecord.addMoveRecord(from, to, board);
   }
 
@@ -117,30 +146,8 @@ public final class ChessMatch {
   }
 
   private boolean isMoveLegal(byte from, byte to) {
-    int fromColumn = PackedTile.column(from);
-    int fromRow = PackedTile.row(from);
-    int toColumn = PackedTile.column(to);
-    int toRow = PackedTile.row(to);
-
-    int movedPiece = board.pieceAt(fromColumn, fromRow);
-    if (movedPiece == Board.EMPTY)
-      return false;
-
-    boolean isWhite = movedPiece > 0;
-    if (isWhite != whiteTurn)
-      return false;
-
-    int targetPiece = board.pieceAt(toColumn, toRow);
-    if (targetPiece != Board.EMPTY && (targetPiece > 0) == isWhite)
-      return false;
-
-    int distX = toColumn - fromColumn;
-    int distY = toRow - fromRow;
-
-    PieceMoveRules.MoveContext context = new PieceMoveRules.MoveContext(from, to, distX, distY, isWhite, targetPiece, board,
-        this::isPathClear);
-
-    return PieceMoveRules.ruleForPiece(Math.abs(movedPiece)).test(context);
+    ArrayList<Byte> moves = validMovesCache.get(from);
+    return !enforceRules || (moves != null && moves.contains(to));
   }
 
   public ArrayList<Tile> validMoves(Tile from) {
@@ -183,14 +190,12 @@ public final class ChessMatch {
 
   private Optional<Tile[]> check(boolean forWhite, byte kingTile){
     ArrayList<Tile> possibleThreats = new ArrayList<>();
-    for (int c = 0; c < Board.SIZE; c++){
-      for (int r = 0; r < Board.SIZE; r++) {
-        byte from = PackedTile.encode(c, r);
-        if (isMoveLegal(from, kingTile))
-          possibleThreats.add(PackedTile.toTile(from));
-      }
+    byte[] opponentPieces = board.piecesPacked(!forWhite);
+    for (byte from : opponentPieces) {
+      if (matchesPieceRule(from, kingTile))
+        possibleThreats.add(PackedTile.toTile(from));
     }
-    if (possibleThreats.size() > 0)
+    if (!possibleThreats.isEmpty())
       return Optional.of(possibleThreats.toArray(new Tile[possibleThreats.size()]));
     return Optional.empty();
   }
@@ -198,33 +203,22 @@ public final class ChessMatch {
   public Optional<Tile[]> checkmate(boolean forWhite) {
     if(forWhite != whiteTurn)
       throw new IllegalStateException("Cannot check for checkmate of the player whose turn it is not");
-    byte kingTile = board.getKingPacked(forWhite);
-    ArrayList<Byte> possibleKingPositions = validMoves(kingTile);
-    boolean kingIsObligatedToMove = false;
-    if (board.piecesCount(forWhite) != 1 && board.pawnsToPromotePacked(forWhite).length == 0) {
-      byte[] pieces = board.piecesPacked(forWhite);
-      int validMovesCount = 0;
-      for (byte piece : pieces) {
-        validMovesCount += validMoves(piece).size();
-        if (validMovesCount - validMoves(kingTile).size() > 0) {
-          kingIsObligatedToMove = true;
-          break;
-        }
-      }
-    }
-    if (kingIsObligatedToMove)
-      possibleKingPositions.add(kingTile);
 
-    ArrayList<Tile> possibleThreats = new ArrayList<>();
-    for(byte possibleKingPosition : possibleKingPositions){
-      Tile[] specificPossibleThreats  = check(forWhite, possibleKingPosition).orElse(new Tile[0]);
-      for(Tile possibleThreat : specificPossibleThreats){
-        possibleThreats.add(possibleThreat);
+    byte kingTile = board.getKingPacked(forWhite);
+    Optional<Tile[]> currentThreats = check(forWhite, kingTile);
+    if (currentThreats.isEmpty())
+      return Optional.empty();
+
+    byte[] defenderPieces = board.piecesPacked(forWhite);
+    for (byte from : defenderPieces) {
+      ArrayList<Byte> candidateMoves = validMoves(from);
+      for (byte to : candidateMoves) {
+        if (resolvesCheck(forWhite, from, to))
+          return Optional.empty();
       }
     }
-    if (possibleThreats.size() > 0)
-      return Optional.of(possibleThreats.toArray(new Tile[possibleThreats.size()]));
-    return Optional.empty();
+
+    return currentThreats;
   }
 
   public ArrayList<Integer> getCapturedPieces() {
@@ -253,5 +247,46 @@ public final class ChessMatch {
       currentRow += rowStep;
     }
     return true;
+  }
+
+  private boolean matchesPieceRule(byte from, byte to) {
+    int movedPiece = board.pieceAt(PackedTile.column(from), PackedTile.row(from));
+    if (movedPiece == Board.EMPTY)
+      return false;
+
+    boolean isWhite = movedPiece > 0;
+    int targetPiece = board.pieceAt(PackedTile.column(to), PackedTile.row(to));
+    if (targetPiece != Board.EMPTY && (targetPiece > 0) == isWhite)
+      return false;
+
+    int distX = PackedTile.column(to) - PackedTile.column(from);
+    int distY = PackedTile.row(to) - PackedTile.row(from);
+
+    PieceMoveRules.MoveContext context = new PieceMoveRules.MoveContext(from, to, distX, distY, isWhite, targetPiece, board,
+        this::isPathClear);
+
+    return PieceMoveRules.ruleForPiece(Math.abs(movedPiece)).test(context);
+  }
+
+  private boolean resolvesCheck(boolean forWhite, byte from, byte to) {
+    Board originalBoard = new Board(board);
+    boolean originalTurn = whiteTurn;
+
+    int fromColumn = PackedTile.column(from);
+    int fromRow = PackedTile.row(from);
+    int toColumn = PackedTile.column(to);
+    int toRow = PackedTile.row(to);
+
+    board.setPieceAt(toColumn, toRow, board.pieceAt(fromColumn, fromRow));
+    board.setPieceAt(fromColumn, fromRow, Board.EMPTY);
+    whiteTurn = !whiteTurn;
+    rebuildValidMovesCache();
+
+    boolean stillInCheck = check(forWhite).isPresent();
+
+    board = originalBoard;
+    whiteTurn = originalTurn;
+    rebuildValidMovesCache();
+    return !stillInCheck;
   }
 }
