@@ -54,10 +54,8 @@ class MatchRecord {
   public byte[][][] generateMatchTensor() {
     byte[][][] matchTensor = new byte[stamps.size()][Board.SIZE][Board.SIZE];
     for (int i = 0; i < stamps.size(); i++) {
-      Board stampBoard = stamps.get(i).board();
-      if (stampBoard == null)
-        continue;
-      byte[][] source = stampBoard.getBoardData();
+      Board boardAt = getBoardAt(i);
+      byte[][] source = boardAt.getBoardData();
       for (int c = 0; c < Board.SIZE; c++)
         System.arraycopy(source[c], 0, matchTensor[i][c], 0, Board.SIZE);
     }
@@ -96,24 +94,25 @@ class MatchRecord {
       }
     }
 
+    int replayStartIndex = 0;
     if (lastRecordedBoardIndex == -1) {
       board.setupStartingBoard();
-      return board;
+    } else {
+      replayStartIndex = lastRecordedBoardIndex + 1;
     }
 
-    for (int i = lastRecordedBoardIndex + 1; i <= index; i++) {
-      MatchStamp moveStamp = stamps.get(i);
-      if (!moveStamp.hasMove())
+    MoveStateTransition.State state = MoveStateTransition.initialState(board, 0);
+    for (int i = replayStartIndex; i <= index; i++) {
+      MatchStamp replayStamp = stamps.get(i);
+      if (replayStamp.board() != null) {
+        board = new Board(replayStamp.board());
+        state = MoveStateTransition.initialState(board, 0);
+        continue;
+      }
+      if (!replayStamp.hasMove())
         continue;
 
-      int fromColumn = PackedTile.column(moveStamp.fromTile());
-      int fromRow = PackedTile.row(moveStamp.fromTile());
-      int toColumn = PackedTile.column(moveStamp.toTile());
-      int toRow = PackedTile.row(moveStamp.toTile());
-
-      int movingPiece = board.pieceAt(fromColumn, fromRow);
-      board.setPieceAt(toColumn, toRow, movingPiece);
-      board.setPieceAt(fromColumn, fromRow, Board.EMPTY);
+      state = MoveStateTransition.apply(board, replayStamp.fromTile(), replayStamp.toTile(), state).state();
     }
     return new Board(board);
   }
